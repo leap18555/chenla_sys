@@ -11,15 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-     Schema::create('staff', function (Blueprint $table) {
-    $table->id();
-    $table->string('name');
-    $table->string('position');
-    $table->string('department');
-    $table->enum('status', ['active', 'leave'])->default('active');
-    $table->timestamps();
-    });
-
+        Schema::create('staff', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('email')->nullable()->unique();
+            $table->string('position');
+            $table->string('department');
+            $table->integer('role')->default(3)->comment('1: Admin, 2: Manager, 3: Staff');
+            $table->enum('status', ['active', 'leave', 'inactive'])->default('active');
+            $table->timestamps();
+        });
     }
 
     /**

@@ -9,11 +9,13 @@ class Customer extends Model
 {
     use HasFactory;
 
-  // Add ALL these fields to the fillable array
+    // Add ALL these fields to the fillable array
     protected $fillable = [
         'name',
         'email',
         'phone',
+        'gender', // Added field
+        'job',    // Added field
         'id_number',
         'dob',
         'pob',
@@ -22,6 +24,8 @@ class Customer extends Model
         'district',
         'id_photo',
         'family_photo',
+        'occupation',
+        'monthly_income',
     ];
 
     public function deposits()

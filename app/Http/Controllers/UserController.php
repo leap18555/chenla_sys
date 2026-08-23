@@ -9,75 +9,89 @@ use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
-    //
-     public function Showlogin(){
+    // Display Login Page
+    public function ShowLogin()
+    {
         return view('Auth.login');
     }
 
-    //public function login(Request $request){
-      //  $email= $request->email;
-       // $pass = $request->password;
+    // Handle Login Submission
+    public function login(Request $request)
+    {
+        $credentials = $request->validate([
+            'email' => 'required|email',
+            'password' => 'required'
+        ]);
 
-      //  if(Auth::attempt(['email'=>$email,'password'=>$pass])){
-          //  if(Auth::user()->role == 0){
-         //       return redirect('/');
-          //  }else{
-          //      return redirect('/dashboard');
-         //   }
-       // }else{
-         //   return redirect('/login');
-        //}
-    //}
+        if (Auth::attempt($credentials)) {
+            $request->session()->regenerate();
+            $user = Auth::user();
 
-    public function ShowRegister(){
+            // ប្រសិនបើជា Admin ឱ្យរត់ទៅ Dashboard
+            if ($user->role === 'admin' || $user->role == 1) {
+                return redirect()->route('dashboard');
+            }
+
+            // ប្រសិនបើជា User ធម្មតា ឱ្យរត់ទៅ User Home
+            return redirect()->route('user.Home');
+        }
+
+        return back()->with('error', 'អ៊ីមែល ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវឡើយ។');
+    }
+
+    // Display Register Page
+    public function ShowRegister()
+    {
         return view('Auth.register');
     }
 
+    // Handle Register Submission
     public function register(Request $request)
     {
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'password' => 'required|min:6|confirmed', // checks password_confirmation
+            'password' => 'required|min:6|confirmed',
         ]);
 
-        User::create([
+        $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
         ]);
 
-        return redirect()->route('login')->with('success', 'Account created successfully!');
-    }
-       
+        // Auto Login បន្ទាប់ពី Register រួច និងបញ្ជូនទៅ Dashboard ភ្លាមៗ
+        Auth::login($user);
 
-    public function renderDashboard(){
-        if(Auth::user()->role == 0){
+        return redirect()->route('dashboard')->with('success', 'បង្កើតគណនី និងចូលប្រព័ន្ធជោគជ័យ!');
+    }
+
+    // Render Dashboard
+    public function renderDashboard()
+    {
+        // ការពារ Error ប្រសិនបើមិនទាន់ Login
+        if (!Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        if (Auth::user()->role == 0) {
             return redirect('/');
         }
+        
         return view('admin.dashboard');
     }
 
-    public function login(Request $request)
-{
-    $credentials = $request->only('email', 'password');
-
-    if (Auth::attempt($credentials)) {
-        $user = Auth::user();
-
-        if ($user->role === 'admin') {
-            return redirect()->route('admin.dashboard');
-        }
-
-         return redirect()->route('user.dashboard');
+    public function dashboard()
+    {
+        return view('user.home');
     }
 
-    return back()->with('error', 'Invalid credentials.');
-}
+    public function logout(Request $request)
+    {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
-
-public function dashboard() {
-    return view('user.dashboard');
-}
-
+        return redirect()->route('login');
+    }
 }

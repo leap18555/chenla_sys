@@ -3,91 +3,174 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Customer; // <-- import the model
+use App\Models\Customer;
+use Illuminate\Support\Facades\Storage;
 
 class CustomersController extends Controller
 {
+    // LIST
     public function index()
     {
-        $customers = Customer::all(); // fetch all customers
+        $customers = Customer::all();
         return view('customers.index', compact('customers'));
     }
 
-        public function create()
+    // CREATE PAGE (កែសម្រួលត្រង់នេះ)
+    public function create()
     {
-        return view('customers.create');
+        // ទាញយកបញ្ជីអតិថិជនទាំងអស់ដើម្បីបោះទៅឱ្យ Dropdown <select>
+        $customers = Customer::all();
+        return view('customers.create', compact('customers'));
     }
-public function store(Request $request)
-{
-    try {
-        // Handle Image 1
-        $idPhotoPath = $request->hasFile('id_photo') 
-            ? $request->file('id_photo')->store('customers', 'public') 
-            : null;
 
-        // Handle Image 2
-        $familyPhotoPath = $request->hasFile('family_photo') 
-            ? $request->file('family_photo')->store('customers', 'public') 
-            : null;
-
-        Customer::create([
-            'name'         => $request->name,
-            'email'        => $request->email,
-            'phone'        => $request->phone,
-            'id_number'    => $request->id_number,
-            'dob'          => $request->dob,
-            'pob'          => $request->pob,
-            'house_no'     => $request->house_no,
-            'street'       => $request->street,
-            'district'     => $request->district,
-            'id_photo'     => $idPhotoPath,
-            'family_photo' => $familyPhotoPath,
+    // STORE
+    public function store(Request $request)
+    {
+        // 1. Validate all incoming form fields matching your Blade names exactly
+        $validatedData = $request->validate([
+            'name'         => 'required|string|max:255',
+            'email'        => 'required|email|unique:customers,email',
+            'phone'        => 'required|string|max:50',
+            'gender'       => 'required|string|in:Male,Female,Other', 
+            'job'          => 'required|string|max:255',              
+            'id_number'    => 'nullable|string|max:50',
+            'dob'          => 'nullable|date',
+            'pob'          => 'nullable|string|max:255',
+            'house_no'     => 'nullable|string|max:50',
+            'street'       => 'nullable|string|max:50',
+            'district'     => 'nullable|string|max:255',
+            'id_photo'     => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'family_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
         ]);
 
-        return redirect()->route('customers.index')->with('success', 'Saved!');
+        try {
+            // 2. Process Identity Photo Upload
+            if ($request->hasFile('id_photo')) {
+                $validatedData['id_photo'] = $request
+                    ->file('id_photo')
+                    ->store('customers', 'public');
+            } else {
+                $validatedData['id_photo'] = null;
+            }
 
-    } catch (\Exception $e) {
-        // This will print the exact error message if the save fails
-        return $e->getMessage(); 
+            // 3. Process Family Photo Upload
+            if ($request->hasFile('family_photo')) {
+                $validatedData['family_photo'] = $request
+                    ->file('family_photo')
+                    ->store('customers', 'public');
+            } else {
+                $validatedData['family_photo'] = null;
+            }
+
+            // 4. Filter only keys allowed by your Model's $fillable array
+            $allowedFields = (new Customer())->getFillable();
+            $filteredData = array_intersect_key($validatedData, array_flip($allowedFields));
+
+            // 5. Secure Database Mass Creation using matching fields
+            Customer::create($filteredData);
+
+            return redirect()
+                ->route('customers.index')
+                ->with('success', 'Customer profile registered safely!');
+
+        } catch (\Exception $e) {
+            return back()
+                ->with('error', 'Database Error: ' . $e->getMessage())
+                ->withInput();
+        }
     }
-}
-     public function edit($id)
+
+    // SHOW
+    public function show($id)
+    {
+        $item = Customer::findOrFail($id);
+        return view('customers.detail', compact('item'));
+    }
+
+    // EDIT PAGE (កែសម្រួលត្រង់នេះ)
+    public function edit($id)
     {
         $customer = Customer::findOrFail($id);
-        return view('customers.edit', compact('customer'));
+        // ទាញយកបញ្ជីអតិថិជនទាំងអស់ក្នុងករណីយក Dropdown ទៅប្រើក្នុងទំព័រ Edit ដែរ
+        $customers = Customer::all();
+        
+        return view('customers.edit', compact('customer', 'customers'));
     }
-       // 5️⃣ Update customer ✅ FIXED
+
+    // UPDATE
     public function update(Request $request, $id)
     {
         $customer = Customer::findOrFail($id);
 
         $request->validate([
-            'name'  => 'required|string|max:255',
-            'email' => 'required|email|unique:customers,email,' . $id,
-            'phone' => 'required'
+            'name'         => 'required|string|max:255',
+            'email'        => 'required|email|unique:customers,email,' . $id,
+            'phone'        => 'required|string|max:50',
+            'gender'       => 'required|string|in:Male,Female,Other', 
+            'job'          => 'required|string|max:255',              
+            'id_number'    => 'nullable|string|max:50',
+            'dob'          => 'nullable|date',
+            'pob'          => 'nullable|string|max:255',
+            'house_no'     => 'nullable|string|max:50',
+            'street'       => 'nullable|string|max:50',
+            'district'     => 'nullable|string|max:255',
+            'id_photo'     => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'family_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
         ]);
 
-        $customer->update($request->all());
+        // Update ID Photo
+        if ($request->hasFile('id_photo')) {
+            if ($customer->id_photo) {
+                Storage::disk('public')->delete($customer->id_photo);
+            }
+            $customer->id_photo = $request->file('id_photo')->store('customers', 'public');
+        }
 
-        return redirect()->route('customers.index')
+        // Update Family Photo
+        if ($request->hasFile('family_photo')) {
+            if ($customer->family_photo) {
+                Storage::disk('public')->delete($customer->family_photo);
+            }
+            $customer->family_photo = $request->file('family_photo')->store('customers', 'public');
+        }
+
+        // Update other fields
+        $customer->name = $request->name;
+        $customer->email = $request->email;
+        $customer->phone = $request->phone;
+        $customer->gender = $request->gender; 
+        $customer->job = $request->job;       
+        $customer->id_number = $request->id_number;
+        $customer->dob = $request->dob;
+        $customer->pob = $request->pob;
+        $customer->house_no = $request->house_no;
+        $customer->street = $request->street;
+        $customer->district = $request->district;
+
+        $customer->save();
+
+        return redirect()
+            ->route('customers.index')
             ->with('success', 'Customer updated successfully');
     }
-      // 6️⃣ Delete customer
+
+    // DELETE
     public function destroy($id)
     {
-        Customer::findOrFail($id)->delete();
+        $customer = Customer::findOrFail($id);
 
-        return redirect()->route('customers.index')
+        if ($customer->id_photo) {
+            Storage::disk('public')->delete($customer->id_photo);
+        }
+
+        if ($customer->family_photo) {
+            Storage::disk('public')->delete($customer->family_photo);
+        }
+
+        $customer->delete();
+
+        return redirect()
+            ->route('customers.index')
             ->with('success', 'Customer deleted successfully');
-    }
-    // app/Http/Controllers/CustomerController.php
-
-public function show($id)
-    {
-        // Fetch the specific customer or 404
-        $item = Customer::findOrFail($id);
-
-        // Pass it to the detail view as 'item'
-        return view('customers.detail', compact('item'));
     }
 }

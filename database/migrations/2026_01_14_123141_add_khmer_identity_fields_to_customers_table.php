@@ -16,7 +16,7 @@ return new class extends Migration
                 $table->string('id_number')->nullable()->after('id');
                 $table->date('dob')->nullable(); // Date of Birth
                 $table->string('pob')->nullable(); // Place of Birth
-                $table->string('gender')->nullable();
+             
                 
                 // Image Fields
                 $table->string('id_photo')->nullable(); // For the Blue ID Card

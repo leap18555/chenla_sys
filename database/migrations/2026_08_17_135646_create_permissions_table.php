@@ -11,9 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-     Schema::table('loans', function (Blueprint $table) {
-        $table->string('type')->after('customer_name');
-    });
+        Schema::create('permissions', function (Blueprint $table) {
+            $table->id();
+            $table->string('name'); //ឧ. Create Post
+            $table->string('slug')->unique(); //ឧ. create-post
+            $table->timestamps();
+        });
     }
 
     /**
@@ -21,8 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-    Schema::table('loans', function (Blueprint $table) {
-        $table->dropColumn('type');
-    });
+        Schema::dropIfExists('permissions');
     }
 };

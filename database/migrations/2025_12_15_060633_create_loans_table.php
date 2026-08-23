@@ -9,23 +9,44 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-public function up(): void
+    public function up(): void
     {
         Schema::create('loans', function (Blueprint $table) {
-           $table->id();
+            $table->id();
+            
+            // Relational Foreign Keys
             $table->unsignedBigInteger('user_id');
-            $table->string('customer_name');  // make sure this exists
+            
+            
+            // Loan Identifiers & Info
+            $table->string('loan_number')->unique();
+            $table->string('purpose')->nullable();
+            $table->string('type')->default('Personal');
+            $table->string('currency')->default('USD');
+            
+            // Financial Terms
             $table->decimal('amount', 15, 2);
             $table->decimal('interest_rate', 5, 2); // interest rate %
-            $table->integer('duration'); // in months
+            $table->integer('duration'); // duration count
+            $table->string('frequency')->default('Monthly'); // Monthly, Weekly
+            $table->date('start_date');
+            $table->string('method')->default('Fixed'); // Declining, Fixed
+            
+            // Calculations (Populated via Controller)
             $table->decimal('total_interest', 15, 2);
             $table->decimal('total_payable', 15, 2);
             $table->decimal('monthly_payment', 15, 2);
-            $table->enum('status', ['active','closed'])->default('active');
+            
+            // Statuses (Matching your Controller validation rules)
+            $table->enum('status', ['Active', 'Pending', 'Paid'])->default('Pending');
+            
             $table->timestamps();
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::dropIfExists('loans');

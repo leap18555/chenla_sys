@@ -8,6 +8,6 @@ class DashboardController extends Controller
 {
      public function index()
     {
-        return view('user.dashboard'); // change view name if needed
+        return view('user.home'); // change view name if needed
     }
 }

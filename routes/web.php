@@ -1,131 +1,116 @@
 <?php
+
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthorController;
 use App\Http\Controllers\ProductsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserController;
-use Illuminate\Support\Facades\Route;
-use Symfony\Component\HttpKernel\Profiler\Profiler;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LoanController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\CustomersController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\DepositsController;
+use App\Http\Controllers\RepaymentController;
+use App\Http\Controllers\CollateralController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\AdminController;
+/*
+|--------------------------------------------------------------------------
+| Public & Guest Routes
+|--------------------------------------------------------------------------
+*/
+ // Admin Dashboard
+    Route::get('/admin_dashboard', [AdminController::class, 'admin_dashboard'])
+        ->name('dashboard');
 
-
-// Route::get('/', function () {
-//     return view('page.dashboard');
-// });
-
-// Forntend 
-Route::controller(ProductsController::class)->group(function(){
-    // home page
-    Route::get('/','home')->name('home');
-    Route::get('/exchange', [ProductsController::class, 'index'])->name('exchange');
-});
-// Login and Registser
-Route::controller(UserController::class)->group(function(){
-    Route::get('/login','ShowLogin')->name('login');
-    Route::post('/login','login')->name('login');
-
-    Route::get('/register','ShowRegister')->name('register');
-    Route::post('/register','register')->name('register');
+// Public Frontend
+Route::controller(ProductsController::class)->group(function () {
+    Route::get('/', 'home')->name('home');
+    Route::get('/exchange', 'index')->name('exchange');
 });
 
-// Profile account
-Route::middleware('auth')->group(function () {
-    Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
+// Redirect default /home requests to dashboard (Fixes the 404 error when logged-in users hit guest routes)
+Route::get('/home', function () {
+    return redirect()->route('dashboard');
 });
 
+// Authentication Routes (សម្រាប់ Guest ដែលមិនទាន់ Login)
+    Route::controller(UserController::class)->group(function () {
+        Route::get('/login', 'ShowLogin')->name('login');
+        Route::post('/login', 'login')->name('login.perform');
 
-// Example of a named route definition
-Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
-Route::get('/user/dashboard', function () {
-    return view('user.dashboard');
-})->name('user.dashboard')->middleware('auth');
-
-Route::resource('authors', AuthorController::class);
+        Route::get('/register', 'ShowRegister')->name('register');
+        Route::post('/register', 'register')->name('register.perform');
+    });
 
 
 /*
 |--------------------------------------------------------------------------
-| Bank Dashboard
+| Authenticated User Routes
 |--------------------------------------------------------------------------
 */
+
 Route::middleware(['auth'])->group(function () {
+
+    // Logout Route
+    Route::post('/logout', [UserController::class, 'logout'])->name('logout');
+
+    // User Profile
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
+    Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
     // Dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index'])
-        ->name('dashboard');
+    Route::get('/user/home', function () {
+        return view('user.home');
+    })->name('user.Home');
+    
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Authors Resource
+    Route::resource('authors', AuthorController::class);
 
     /*
     |--------------------------------------------------------------------------
-    | Loan Management
+    | Permission Protected System Routes
     |--------------------------------------------------------------------------
     */
 
+    // Borrowers / Customers Management
+    Route::middleware(['can:view-borrowers'])->group(function () {
+        Route::resource('customers', CustomersController::class);
+    });
 
-Route::middleware(['auth'])->group(function () {
-    Route::get('/loans', [LoanController::class, 'index'])->name('loans.index');
-    Route::get('/loans/create', [LoanController::class, 'create'])->name('loans.create');
-    Route::post('/loans', [LoanController::class, 'store'])->name('loans.store');
-    Route::get('/loans/{loan}', [LoanController::class, 'show'])->name('loans.show');
-    Route::get('/loans/{loan}/edit', [LoanController::class, 'edit'])->name('loans.edit');
-    Route::put('/loans/{loan}', [LoanController::class, 'update'])->name('loans.update');
-    Route::delete('/loans/{loan}', [LoanController::class, 'destroy'])->name('loans.destroy');
+    // Loan & Collateral Management
+    Route::middleware(['can:manage-loans'])->group(function () {
+        Route::resource('loans', LoanController::class);
+        Route::resource('collaterals', CollateralController::class);
+        Route::resource('repayments', RepaymentController::class);
+
+        // Transactions & Deposits
+        Route::get('/transactions', [TransactionController::class, 'index'])->name('transactions.index');
+        Route::resource('deposits', DepositsController::class)->only(['index', 'create', 'store']);
+    });
+
+    // Reports
+    Route::middleware(['can:view-reports'])->group(function () {
+        Route::get('/reports', function () {
+            //return view('reports.index');
+        })->name('reports.index');
+    });
+
+    // System Audit Logs
+    Route::middleware(['can:view-audit-logs'])->group(function () {
+        Route::get('/audit-logs', function () {
+            //return view('audit-logs.index');
+        })->name('audit-logs.index');
+    });
+
+    // Staff & User Management
+    Route::middleware(['can:view-roles'])->group(function () {
+        Route::resource('staff', StaffController::class);
+        Route::resource('roles', RoleController::class);
+    });
+
 });
-
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Transactions
-    |--------------------------------------------------------------------------
-    */
-    Route::get('/transactions', [TransactionController::class, 'index'])
-        ->name('transactions.index');
-});
-// Customers
-Route::get('/customers', [CustomersController::class, 'index'])->name('customers.index');
-Route::get('/customers/create', [CustomersController::class, 'create'])->name('customers.create');
-Route::post('/customers', [CustomersController::class, 'store'])->name('customers.store');
-Route::get('/customers/{id}/edit', [CustomersController::class, 'edit'])->name('customers.edit');
-Route::put('/customers/{id}', [CustomersController::class, 'update'])->name('customers.update');
-Route::delete('/customers/{id}', [CustomersController::class, 'destroy'])->name('customers.destroy');
-// The Detail Page Route
-Route::get('customers/{id}', [CustomersController::class, 'show'])->name('customers.show');
-
-
-
-// Deposits Route
-
-
-Route::get('/deposits', [DepositsController::class, 'index'])->name('deposits.index');
-Route::get('/deposits/create', [DepositsController::class, 'create'])->name('deposits.create');
-Route::post('/deposits', [DepositsController::class, 'store'])->name('deposits.store');
-
-
-// Staff list
-
-Route::get('/staff', [StaffController::class, 'index'])->name('staff.index');
-
-// Create staff form
-Route::get('/staff/create', [StaffController::class, 'create'])->name('staff.create');
-
-// Store new staff
-Route::post('/staff', [StaffController::class, 'store'])->name('staff.store');
-
-// Show staff profile
-Route::get('/staff/{staff}', [StaffController::class, 'show'])->name('staff.show');
-
-// Edit staff form
-Route::get('/staff/{staff}/edit', [StaffController::class, 'edit'])->name('staff.edit');
-
-// Update staff
-Route::put('/staff/{staff}', [StaffController::class, 'update'])->name('staff.update');
-
-// Delete staff
-Route::delete('/staff/{staff}', [StaffController::class, 'destroy'])->name('staff.destroy');
-
- 

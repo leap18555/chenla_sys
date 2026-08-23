@@ -7,10 +7,10 @@ use Illuminate\Http\Request;
 
 class AuthorController extends Controller
 {
-    // Show all authors (with pagination)
+    // Show all authors (with pagination ordered by newest)
     public function index()
     {
-        $authors = Author::paginate(5);
+        $authors = Author::latest()->paginate(5);
         return view('authors.index', compact('authors'));
     }
 
@@ -28,8 +28,11 @@ class AuthorController extends Controller
             'email' => 'required|email|unique:authors,email',
             'website' => 'nullable|url',
             'phone' => 'nullable|string|max:20',
-            'is_active' => 'boolean',
+            'is_active' => 'nullable|boolean',
         ]);
+
+        // Fix: Explicitly convert checkbox state (unchecked HTML inputs send nothing)
+        $validated['is_active'] = $request->boolean('is_active');
 
         Author::create($validated);
 
@@ -56,8 +59,11 @@ class AuthorController extends Controller
             'email' => 'required|email|unique:authors,email,' . $author->id,
             'website' => 'nullable|url',
             'phone' => 'nullable|string|max:20',
-            'is_active' => 'boolean',
+            'is_active' => 'nullable|boolean',
         ]);
+
+        // Fix: Explicitly update boolean so unchecking the box saves as false/0
+        $validated['is_active'] = $request->boolean('is_active');
 
         $author->update($validated);
 
