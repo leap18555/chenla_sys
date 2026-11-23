@@ -1,118 +1,321 @@
 @extends('layouts.master')
 
-@section('title', 'បង្កើតប្រាក់កម្ចី | Create Loan')
+@section('title', 'បង្កើតកិច្ចសន្យាខ្ចីថ្មី | ធនាគារ ចេនឡា')
 
 @section('content')
-<div class="min-h-screen bg-[#f8f9fa] py-10 px-4 md:px-8 font-sans">
-    <div class="max-w-2xl mx-auto">
-        
-        {{-- Page Title / Header Style --}}
-        <div class="mb-6 pl-2">
-            <h1 class="text-xl font-bold text-slate-800 tracking-tight">ប្រាក់កម្ចី</h1>
+<div x-data="{
+        amount: {{ (float) old('amount', 5000) }},
+        rate: {{ (float) old('interest_rate', 18) }},
+        duration: {{ (int) old('duration', 12) }},
+        frequency: '{{ old('frequency', 'Monthly') }}',
+        method: '{{ old('method', 'Declining') }}',
+        get monthlyPayment() {
+            let p = parseFloat(this.amount) || 0;
+            let r = ((parseFloat(this.rate) || 0) / 100) / 12;
+            let m = Math.max(1, parseInt(this.duration) || 1);
+            if (this.method === 'Declining' && r > 0) {
+                return (p * (r * Math.pow(1 + r, m)) / (Math.pow(1 + r, m) - 1)).toFixed(2);
+            } else {
+                let totalInterest = p * (parseFloat(this.rate) / 100) * (m / 12);
+                return ((p + totalInterest) / m).toFixed(2);
+            }
+        },
+        get totalInterest() {
+            let p = parseFloat(this.amount) || 0;
+            let m = Math.max(1, parseInt(this.duration) || 1);
+            let total = parseFloat(this.monthlyPayment) * m;
+            return Math.max(0, total - p).toFixed(2);
+        },
+        get totalPayable() {
+            let m = Math.max(1, parseInt(this.duration) || 1);
+            return (parseFloat(this.monthlyPayment) * m).toFixed(2);
+        }
+     }" 
+     class="max-w-4xl mx-auto space-y-6">
+
+        {{-- TOP HEADER & BACK NAVIGATION --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-[0_4px_20px_rgb(15,41,66,0.03)]">
+            <div class="flex items-center gap-3">
+                <a href="{{ route('loans.index') }}" 
+                   class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-all active:scale-95 shadow-xs"
+                   title="ត្រឡប់ទៅកាន់បញ្ជីកម្ចី">
+                    <i class="bi bi-arrow-left text-base"></i>
+                </a>
+                <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <a href="{{ route('loans.index') }}" class="text-xs font-semibold text-slate-400 hover:text-slate-600">កិច្ចសន្យាខ្ចី</a>
+                        <i class="bi bi-chevron-right text-[10px] text-slate-300"></i>
+                        <span class="text-xs font-medium text-slate-600">បង្កើតកិច្ចសន្យាថ្មី</span>
+                    </div>
+                    <h1 class="text-lg sm:text-xl font-bold text-[#0B2B40] mt-0.5 flex items-center gap-2">
+                        <span>បង្កើតកិច្ចសន្យាខ្ចីថ្មី</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            New Contract
+                        </span>
+                    </h1>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2.5">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#142d42]/5 text-[#142d42] border border-slate-200">
+                    <i class="bi bi-upc-scan text-teal-700"></i>
+                    <span>{{ $loanNumber ?? 'LN-' . date('Y') . '-001' }}</span>
+                </span>
+            </div>
         </div>
 
-        {{-- Validation Errors --}}
+        {{-- VALIDATION ERRORS BANNER --}}
         @if ($errors->any())
-            <div class="mb-6 rounded-2xl bg-red-50 border border-red-100 p-4 shadow-sm">
-                <ul class="list-disc list-inside space-y-1">
-                    @foreach ($errors->all() as $error)
-                        <li class="text-sm text-red-600 font-medium">{{ $error }}</li>
-                    @endforeach
-                </ul>
+            <div class="rounded-2xl bg-rose-50 border border-rose-200/80 p-5 shadow-xs text-rose-800">
+                <div class="flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 mt-0.5">
+                        <i class="bi bi-exclamation-triangle-fill text-base"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-xs sm:text-sm">សូមពិនិត្យមើលកំហុសខាងក្រោមមុននឹងបន្ត៖</h4>
+                        <ul class="list-disc list-inside text-xs text-rose-700 mt-1.5 space-y-1">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
             </div>
         @endif
 
-        {{-- Main Card Container --}}
-        <div class="bg-white border border-slate-100 rounded-3xl shadow-[0_10px_30px_rgba(0,0,0,0.02)] p-6 md:p-8">
-            
-            {{-- Form Header Area --}}
-            <div class="flex items-center justify-between border-b border-slate-100 pb-5 mb-6">
-                <div>
-                    <h2 class="text-lg font-bold text-slate-800">បង្កើតប្រាក់កម្ចី</h2>
-                </div>
-                <button type="button" class="px-4 py-1.5 text-xs font-semibold text-slate-500 bg-[#eef0f2] border border-slate-200 rounded-lg hover:bg-slate-200 transition-colors">
-                    សម្ងាត់
-                </button>
+        {{-- LIVE CALCULATION ESTIMATE BAR --}}
+        <div class="rounded-2xl bg-gradient-to-r from-[#142d42] to-[#1e5158] text-white p-5 shadow-md">
+            <div class="flex items-center justify-between mb-3 border-b border-white/10 pb-3">
+                <span class="text-xs font-semibold text-teal-200 flex items-center gap-1.5">
+                    <i class="bi bi-calculator"></i>
+                    <span>ការគណនាស្វ័យប្រវត្តិបឋម (Live Estimate Preview)</span>
+                </span>
+                <span class="text-[11px] font-bold uppercase tracking-wider bg-white/10 px-2 py-0.5 rounded text-white/90">
+                    <span x-text="method === 'Declining' ? 'សមតុល្យថយចុះ' : 'ការប្រាក់ថេរ'"></span>
+                </span>
             </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-white/5 rounded-xl p-3 border border-white/10">
+                    <span class="block text-[11px] text-slate-300">ត្រូវបង់ប្រចាំខែ (Monthly Payment)</span>
+                    <span class="text-xl font-black text-emerald-300 tracking-tight">
+                        $<span x-text="monthlyPayment"></span>
+                    </span>
+                </div>
+                <div class="bg-white/5 rounded-xl p-3 border border-white/10">
+                    <span class="block text-[11px] text-slate-300">ការប្រាក់សរុប (Total Interest)</span>
+                    <span class="text-xl font-black text-amber-300 tracking-tight">
+                        $<span x-text="totalInterest"></span>
+                    </span>
+                </div>
+                <div class="bg-white/5 rounded-xl p-3 border border-white/10">
+                    <span class="block text-[11px] text-slate-300">ទឹកប្រាក់សរុប (Total Payable)</span>
+                    <span class="text-xl font-black text-teal-200 tracking-tight">
+                        $<span x-text="totalPayable"></span>
+                    </span>
+                </div>
+            </div>
+        </div>
 
-            {{-- Form --}}
-            <form action="{{ route('loans.store') }}" method="POST" class="space-y-5">
+        {{-- MAIN FORM CARD --}}
+        <div class="bg-white border border-slate-200/80 rounded-2xl shadow-[0_4px_20px_rgb(15,41,66,0.03)] overflow-hidden">
+            <div class="h-1.5 w-full bg-gradient-to-r from-[#142d42] via-[#1e5158] to-[#4caf7c]"></div>
+
+            <form action="{{ route('loans.store') }}" method="POST" class="p-6 sm:p-8 space-y-6">
                 @csrf
 
-                {{-- Row 1: Customer & Loan Number --}}
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                        <label for="customer_id" class="block text-xs font-bold text-slate-400 mb-2">អតិថិជន</label>
-                        <div class="relative">
-                            <select name="customer_id" id="customer_id" required
-                                class="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-[#f1f3f5] text-slate-700 font-medium focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all appearance-none cursor-pointer">
-                                <option value="" disabled {{ old('customer_id') ? '' : 'selected' }}>ជ្រើសរើសអតិថិជន</option>
-                                
-                                @foreach($customers ?? [] as $customer)
-                                    <option value="{{ $customer->id }}" {{ old('customer_id') == $customer->id ? 'selected' : '' }}>
-                                        {{ $customer->name }} (ID-{{ str_pad($customer->id, 6, '0', STR_PAD_LEFT) }})
-                                    </option>
-                                @endforeach
-                            </select>
-                            <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
-                                <i class="bi bi-chevron-down text-xs"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label for="loan_number" class="block text-xs font-bold text-slate-400 mb-2">លេខប្រាក់កម្ចី</label>
-                        <input type="text" name="loan_number" id="loan_number" value="{{ old('loan_number', $loanNumber ?? 'LN-'.date('Y').'-001') }}" readonly
-                            class="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-[#eef0f2] text-slate-600 font-semibold focus:outline-none cursor-not-allowed">
-                    </div>
-                </div>
-
-               {{-- Row 2: Purpose --}}
+                {{-- SECTION 1: BORROWER & IDENTIFIERS --}}
                 <div>
-                    <label for="purpose" class="block text-xs font-bold text-slate-400 mb-2">គោលបំណង</label>
-                    <select name="purpose" id="purpose" 
-                        class="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-[#f1f3f5] text-slate-800 font-medium focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all appearance-none">
-                        
-                        <option value="" disabled {{ old('purpose') ? '' : 'selected' }}>ជ្រើសរើសគោលបំណង...</option>
-                        
-                        <option value="business" {{ old('purpose') == 'business' ? 'selected' : '' }}>ធុរកិច្ច (Business)</option>
-                        <option value="personal" {{ old('purpose') == 'personal' ? 'selected' : '' }}>ផ្ទាល់ខ្លួន (Personal)</option>
-                        <option value="education" {{ old('purpose') == 'education' ? 'selected' : '' }}>ការសិក្សា (Education)</option>
-                        <option value="other" {{ old('purpose') == 'other' ? 'selected' : '' }}>ផ្សេងៗ (Other)</option>
-                        
-                    </select>
+                    <div class="flex items-center gap-2 pb-2 mb-4 border-b border-slate-100">
+                        <i class="bi bi-person-badge text-[#0F4C5C] text-base"></i>
+                        <h3 class="text-sm font-bold text-[#0B2B40]">ផ្នែកទី ១៖ ព័ត៌មានអតិថិជន និងកិច្ចសន្យា</h3>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        {{-- Customer Select --}}
+                        <div>
+                            <label for="customer_id" class="block text-xs font-bold text-slate-600 mb-2 flex items-center justify-between">
+                                <span>អតិថិជន (Borrower) <span class="text-rose-500">*</span></span>
+                                <span class="text-[11px] font-normal text-slate-400">ជ្រើសរើសពីបញ្ជី</span>
+                            </label>
+                            <div class="relative">
+                                <select name="customer_id" id="customer_id" required
+                                        class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 text-xs text-slate-900 font-medium transition appearance-none cursor-pointer">
+                                    <option value="" disabled {{ old('customer_id') ? '' : 'selected' }}>-- ជ្រើសរើសអតិថិជនកម្ចី --</option>
+                                    @foreach($customers as $c)
+                                        <option value="{{ $c->id }}" {{ old('customer_id') == $c->id ? 'selected' : '' }}>
+                                            {{ $c->name }} (ID-{{ str_pad($c->id, 5, '0', STR_PAD_LEFT) }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
+                                    <i class="bi bi-chevron-down text-xs"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Loan Number (Locked) --}}
+                        <div>
+                            <label for="loan_number" class="block text-xs font-bold text-slate-600 mb-2 flex items-center justify-between">
+                                <span>លេខកូដកិច្ចសន្យា (Loan Number) <span class="text-rose-500">*</span></span>
+                                <span class="text-[11px] text-slate-400 font-normal"><i class="bi bi-lock-fill"></i> ប្រព័ន្ធបង្កើតស្វ័យប្រវត្តិ</span>
+                            </label>
+                            <div class="relative">
+                                <input type="text" name="loan_number" id="loan_number" 
+                                       value="{{ old('loan_number', $loanNumber ?? 'LN-'.date('Y').'-001') }}" readonly
+                                       class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-100/70 text-xs text-slate-700 font-bold focus:outline-none cursor-not-allowed">
+                                <div class="absolute inset-y-0 right-4 flex items-center text-slate-400">
+                                    <i class="bi bi-shield-check text-xs"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Purpose --}}
+                        <div>
+                            <label for="purpose" class="block text-xs font-bold text-slate-600 mb-2">គោលបំណងកម្ចី (Loan Purpose)</label>
+                            <div class="relative">
+                                <select name="purpose" id="purpose" 
+                                        class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 text-xs text-slate-900 font-medium transition appearance-none cursor-pointer">
+                                    <option value="business" {{ old('purpose') == 'business' ? 'selected' : '' }}>ធុរកិច្ច (Business)</option>
+                                    <option value="personal" {{ old('purpose', 'personal') == 'personal' ? 'selected' : '' }}>ផ្ទាល់ខ្លួន (Personal)</option>
+                                    <option value="education" {{ old('purpose') == 'education' ? 'selected' : '' }}>ការសិក្សា (Education)</option>
+                                    <option value="housing" {{ old('purpose') == 'housing' ? 'selected' : '' }}>គេហដ្ឋាន (Housing)</option>
+                                    <option value="other" {{ old('purpose') == 'other' ? 'selected' : '' }}>ផ្សេងៗ (Other)</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
+                                    <i class="bi bi-chevron-down text-xs"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Loan Type / Currency --}}
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-2">ប្រភេទ (Type)</label>
+                                <input type="text" name="type" value="{{ old('type', 'Personal') }}" readonly
+                                       class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-100/80 text-xs text-slate-700 font-semibold cursor-not-allowed">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-2">រូបិយប័ណ្ណ (Currency)</label>
+                                <input type="text" name="currency" value="USD" readonly
+                                       class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-100/80 text-xs text-slate-700 font-bold cursor-not-allowed">
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                {{-- Row 3: Principal Amount & Interest Rate --}}
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                        <label for="amount" class="block text-xs font-bold text-slate-400 mb-2">ប្រាក់ដើម</label>
-                        <input type="number" step="0.01" min="0" name="amount" id="amount" value="{{ old('amount') }}" placeholder="0.00" required
-                            class="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-[#f1f3f5] text-slate-800 font-semibold focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all">
+                {{-- SECTION 2: FINANCIAL TERMS & RATES --}}
+                <div class="pt-2">
+                    <div class="flex items-center gap-2 pb-2 mb-4 border-b border-slate-100">
+                        <i class="bi bi-cash-stack text-[#0F4C5C] text-base"></i>
+                        <h3 class="text-sm font-bold text-[#0B2B40]">ផ្នែកទី ២៖ លក្ខខណ្ឌហិរញ្ញវត្ថុ & ការប្រាក់</h3>
                     </div>
 
-                    <div>
-                        <label for="interest_rate" class="block text-xs font-bold text-slate-400 mb-2">ការប្រាក់ប្រចាំឆ្នាំ %</label>
-                        <input type="number" step="0.01" min="0" name="interest_rate" id="interest_rate" value="{{ old('interest_rate', '18') }}" required
-                            class="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-[#f1f3f5] text-slate-800 font-semibold focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        {{-- Principal Amount --}}
+                        <div>
+                            <label for="amount" class="block text-xs font-bold text-slate-600 mb-2">
+                                ចំនួនប្រាក់ដើម ($) <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-3.5 flex items-center text-emerald-600 font-bold text-sm">$</span>
+                                <input type="number" step="0.01" min="1" name="amount" id="amount" 
+                                       x-model.number="amount"
+                                       value="{{ old('amount', 5000) }}" required placeholder="0.00"
+                                       class="w-full pl-8 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 text-xs text-slate-900 font-black transition">
+                            </div>
+                        </div>
+
+                        {{-- Interest Rate --}}
+                        <div>
+                            <label for="interest_rate" class="block text-xs font-bold text-slate-600 mb-2">
+                                អត្រាការប្រាក់ (% ក្នុងមួយឆ្នាំ) <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 right-4 flex items-center text-teal-600 font-bold text-xs">% / ឆ្នាំ</span>
+                                <input type="number" step="0.01" min="0" name="interest_rate" id="interest_rate" 
+                                       x-model.number="rate"
+                                       value="{{ old('interest_rate', '18') }}" required
+                                       class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 text-xs text-slate-900 font-black transition">
+                            </div>
+                        </div>
+
+                        {{-- Duration --}}
+                        <div>
+                            <label for="duration" class="block text-xs font-bold text-slate-600 mb-2">
+                                ចំនួនដងបង់ / រយៈពេល (ខែ) <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 right-4 flex items-center text-slate-400 font-medium text-xs">ខែ (Months)</span>
+                                <input type="number" min="1" max="360" name="duration" id="duration" 
+                                       x-model.number="duration"
+                                       value="{{ old('duration', '12') }}" required
+                                       class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 text-xs text-slate-900 font-bold transition">
+                            </div>
+                        </div>
+
+                        {{-- Frequency --}}
+                        <div>
+                            <label for="frequency" class="block text-xs font-bold text-slate-600 mb-2">
+                                ប្រេកង់នៃការបង់ (Payment Frequency) <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <select name="frequency" id="frequency" required
+                                        class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 text-xs text-slate-900 font-semibold transition appearance-none cursor-pointer">
+                                    <option value="Monthly" {{ old('frequency', 'Monthly') == 'Monthly' ? 'selected' : '' }}>ប្រចាំខែ (Monthly)</option>
+                                    <option value="Weekly" {{ old('frequency') == 'Weekly' ? 'selected' : '' }}>ប្រចាំសប្តាហ៍ (Weekly)</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
+                                    <i class="bi bi-chevron-down text-xs"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Start Date --}}
+                        <div>
+                            <label for="start_date" class="block text-xs font-bold text-slate-600 mb-2">
+                                កាលបរិច្ឆេទចាប់ផ្តើម (Start Date) <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="date" name="start_date" id="start_date" 
+                                   value="{{ old('start_date', date('Y-m-d')) }}" required
+                                   class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 text-xs text-slate-900 font-medium transition">
+                        </div>
+
+                        {{-- Calculation Method --}}
+                        <div>
+                            <label for="method" class="block text-xs font-bold text-slate-600 mb-2">
+                                វិធីសាស្ត្រគណនាការប្រាក់ <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <select name="method" id="method" required 
+                                        x-model="method"
+                                        class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 text-xs text-slate-900 font-semibold transition appearance-none cursor-pointer">
+                                    <option value="Declining">សមតុល្យថយចុះ (Declining Balance - ស្តង់ដារ)</option>
+                                    <option value="Fixed">ការប្រាក់ថេរ (Fixed / Flat Rate)</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
+                                    <i class="bi bi-chevron-down text-xs"></i>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {{-- Row 4: Number of Payments & Frequency --}}
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                        <label for="duration" class="block text-xs font-bold text-slate-400 mb-2">ចំនូនដងបង់</label>
-                        <input type="number" name="duration" id="duration" value="{{ old('duration', '12') }}" required
-                            class="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-[#f1f3f5] text-slate-800 font-semibold focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all">
+                {{-- SECTION 3: STATUS & APPROVAL --}}
+                <div class="pt-2">
+                    <div class="flex items-center gap-2 pb-2 mb-4 border-b border-slate-100">
+                        <i class="bi bi-sliders text-[#0F4C5C] text-base"></i>
+                        <h3 class="text-sm font-bold text-[#0B2B40]">ផ្នែកទី ៣៖ ស្ថានភាពដំបូង (Initial Status)</h3>
                     </div>
 
-                    <div>
-                        <label for="frequency" class="block text-xs font-bold text-slate-400 mb-2">ភាពញឹកញាប់</label>
+                    <div class="max-w-md">
+                        <label for="status" class="block text-xs font-bold text-slate-600 mb-2">
+                            ស្ថានភាពកិច្ចសន្យា <span class="text-rose-500">*</span>
+                        </label>
                         <div class="relative">
-                            <select name="frequency" id="frequency" required
-                                class="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-[#f1f3f5] text-slate-700 font-medium focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all appearance-none cursor-pointer">
-                                <option value="Monthly" {{ old('frequency', 'Monthly') == 'Monthly' ? 'selected' : '' }}>ប្រចាំខែ</option>
-                                <option value="Weekly" {{ old('frequency') == 'Weekly' ? 'selected' : '' }}>ប្រចាំសប្តាហ៍</option>
+                            <select name="status" id="status" required
+                                    class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 text-xs text-slate-900 font-bold transition appearance-none cursor-pointer">
+                                <option value="Active" {{ old('status', 'Active') == 'Active' ? 'selected' : '' }}>🟢 សកម្ម (Active - ដំណើរការភ្លាមៗ)</option>
+                                <option value="Pending" {{ old('status') == 'Pending' ? 'selected' : '' }}>🟡 រង់ចាំការអនុម័ត (Pending)</option>
                             </select>
                             <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
                                 <i class="bi bi-chevron-down text-xs"></i>
@@ -121,57 +324,28 @@
                     </div>
                 </div>
 
-                {{-- Row 5: Start Date & Calculation Method --}}
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                        <label for="start_date" class="block text-xs font-bold text-slate-400 mb-2">កាលបរិច្ឆេទចាប់ផ្តើម</label>
-                        <div class="relative">
-                            <input type="date" name="start_date" id="start_date" value="{{ old('start_date', date('Y-m-d')) }}" required
-                                class="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-[#f1f3f5] text-slate-700 font-semibold focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all">
-                        </div>
+                {{-- ACTION BUTTONS --}}
+                <div class="pt-6 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="text-[11px] text-slate-400 flex items-center gap-1.5">
+                        <i class="bi bi-info-circle text-teal-600"></i>
+                        <span>ប្រព័ន្ធនឹងបង្កើតកាលវិភាគសងត្រឡប់ដោយស្វ័យប្រវត្តិតាមការកំណត់ខាងលើ។</span>
                     </div>
 
-                    <div>
-                        <label for="method" class="block text-xs font-bold text-slate-400 mb-2">វិធីគណនា</label>
-                        <div class="relative">
-                            <select name="method" id="method" required
-                                class="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-[#f1f3f5] text-slate-700 font-medium focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all appearance-none cursor-pointer">
-                                <option value="Declining" {{ old('method', 'Declining') == 'Declining' ? 'selected' : '' }}>សមតុល្យថយចុះ</option>
-                                <option value="Fixed" {{ old('method') == 'Fixed' ? 'selected' : '' }}>ការប្រាក់ថេរ</option>
-                            </select>
-                            <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
-                                <i class="bi bi-chevron-down text-xs"></i>
-                            </div>
-                        </div>
+                    <div class="flex items-center gap-3">
+                        <a href="{{ route('loans.index') }}" 
+                           class="px-5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold shadow-xs transition">
+                            បោះបង់
+                        </a>
+                        <button type="submit" 
+                                class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold shadow-md shadow-emerald-700/10 transition-all active:scale-95">
+                            <i class="bi bi-plus-lg"></i>
+                            <span>បង្កើតកិច្ចសន្យាខ្ចី</span>
+                        </button>
                     </div>
-                </div>
-
-                {{-- Row 6: Status --}}
-                <div>
-                    <label for="status" class="block text-xs font-bold text-slate-400 mb-2">ស្ថានភាព</label>
-                    <div class="relative">
-                        <select name="status" id="status" required
-                            class="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-[#f1f3f5] text-slate-700 font-medium focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all appearance-none cursor-pointer">
-                            <option value="Active" {{ old('status', 'Active') == 'Active' ? 'selected' : '' }}>សកម្ម</option>
-                            <option value="Pending" {{ old('status') == 'Pending' ? 'selected' : '' }}>រង់ចាំការអនុម័ត</option>
-                        </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
-                            <i class="bi bi-chevron-down text-xs"></i>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Submit Button Area --}}
-                <div class="pt-4">
-                    <button type="submit"
-                        class="w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-[#00875a] text-white font-bold text-base shadow-sm hover:bg-[#00704a] active:scale-[0.99] transition-all duration-150">
-                        <i class="bi bi-plus-lg text-lg"></i>
-                        រក្សាទុកប្រាក់កម្ចី
-                    </button>
                 </div>
 
             </form>
         </div>
+
     </div>
-</div>
 @endsection

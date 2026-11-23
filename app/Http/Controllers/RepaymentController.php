@@ -10,20 +10,36 @@ use Illuminate\Support\Facades\DB;
 class RepaymentController extends Controller
 {
     /**
-     * Display the repayment dashboard interface.
+     * Display the repayment dashboard interface and history list.
      */
-    public function index()
+    public function index(Request $request)
     {
-        // 1. Fetch active loans to populate your selection dropdown
-        $loans = Loan::where('status', 'active')->get();
+        $query = Repayment::with(['loan.customer'])->latest('payment_date');
 
-        // 2. Fetch all repayment logs along with their associated loan details
-        $repayments = Repayment::with('loan')
-            ->latest('payment_date')
+        if ($request->filled('loan_id')) {
+            $query->where('loan_id', $request->input('loan_id'));
+        }
+
+        $repayments = $query->get();
+        $activeLoansCount = Loan::where('status', 'active')->count();
+
+        return view('repayments.index', compact('repayments', 'activeLoansCount'));
+    }
+
+    /**
+     * Show the form for creating/recording a new repayment.
+     */
+    public function create(Request $request)
+    {
+        // Fetch active loans with customer details
+        $loans = Loan::with('customer')
+            ->where('status', 'active')
             ->get();
 
-        // 3. Return the Blade view passing the collected dataset collections
-        return view('repayments.index', compact('loans', 'repayments'));
+        $selectedLoanId = $request->query('loan_id', '');
+        $defaultAmount = $request->query('amount', '');
+
+        return view('repayments.create', compact('loans', 'selectedLoanId', 'defaultAmount'));
     }
 
     /**
@@ -64,9 +80,10 @@ class RepaymentController extends Controller
             $loan->save();
         });
 
-        // 4. Redirect right back to the ledger screen with a success banner notice
-        return redirect()
-            ->route('repayments.index')
+        // 4. Redirect back or to specified route with a success banner notice
+        $redirectUrl = $request->input('redirect_to', route('repayments.index'));
+
+        return redirect($redirectUrl)
             ->with('success', 'ការសងប្រាក់ត្រូវបានរក្សាទុកដោយជោគជ័យ!');
     }
 }

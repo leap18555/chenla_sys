@@ -1,62 +1,114 @@
 @extends('layouts.master')
 
+@section('header_title', 'បន្ថែមអ្នកនិពន្ធថ្មី')
+
 @section('content')
-<div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Add New Author</h5>
+<div class="max-w-2xl mx-auto px-2">
+
+    {{-- Back Link --}}
+    <div class="mb-5">
+        <a href="{{ route('authors.index') }}" class="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-[#1a5276] font-medium transition-colors">
+            <i class="bi bi-arrow-left"></i>
+            <span>ត្រឡប់ទៅបញ្ជី</span>
+        </a>
+    </div>
+
+    {{-- Form Card --}}
+    <div class="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
+
+        {{-- Card Header --}}
+        <div class="px-6 py-5 border-b border-slate-100 bg-[#1a5276]">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center text-white">
+                    <i class="bi bi-person-plus text-lg"></i>
                 </div>
-                <div class="card-body">
-                    <form action="{{ route('authors.store') }}" method="POST">
-                        @csrf
-
-                        <div class="mb-3">
-                            <label for="name" class="form-label">Full Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name" id="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name') }}" required>
-                            @error('name')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email Address <span class="text-danger">*</span></label>
-                            <input type="email" name="email" id="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email') }}" required>
-                            @error('email')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="phone" class="form-label">Phone Number</label>
-                            <input type="text" name="phone" id="phone" class="form-control @error('phone') is-invalid @enderror" value="{{ old('phone') }}">
-                            @error('phone')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="website" class="form-label">Website URL</label>
-                            <input type="url" name="website" id="website" class="form-control @error('website') is-invalid @enderror" value="{{ old('website') }}" placeholder="https://example.com">
-                            @error('website')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="form-check mb-4">
-                            <input type="checkbox" name="is_active" id="is_active" value="1" class="form-check-input" {{ old('is_active', true) ? 'checked' : '' }}>
-                            <label for="is_active" class="form-check-label">Active Status</label>
-                        </div>
-
-                        <div class="d-flex justify-content-between">
-                            <a href="{{ route('authors.index') }}" class="btn btn-secondary">Cancel</a>
-                            <button type="submit" class="btn btn-success">Save Author</button>
-                        </div>
-                    </form>
+                <div>
+                    <h3 class="text-base font-bold text-white">បន្ថែមអ្នកនិពន្ធថ្មី</h3>
+                    <p class="text-xs text-white/60 mt-0.5">បំពេញព័ត៌មានខាងក្រោមដើម្បីបង្កើតអ្នកនិពន្ធថ្មី</p>
                 </div>
             </div>
         </div>
+
+        {{-- Card Body --}}
+        <div class="p-6">
+            <form action="{{ route('authors.store') }}" method="POST">
+                @csrf
+
+                {{-- Full Name --}}
+                <div class="mb-5">
+                    <label for="name" class="block text-sm font-semibold text-slate-700 mb-2">
+                        ឈ្មោះពេញ <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="text" name="name" id="name" value="{{ old('name') }}" required
+                        class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#1a5276]/40 focus:ring-2 focus:ring-[#1a5276]/10 transition-all @error('name') border-rose-300 ring-2 ring-rose-100 @enderror"
+                        placeholder="បញ្ចូលឈ្មោះពេញ">
+                    @error('name')
+                        <p class="mt-1.5 text-xs text-rose-500 flex items-center gap-1"><i class="bi bi-exclamation-circle"></i> {{ $message }}</p>
+                    @enderror
+                </div>
+
+                {{-- Email --}}
+                <div class="mb-5">
+                    <label for="email" class="block text-sm font-semibold text-slate-700 mb-2">
+                        អ៊ីមែល <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="email" name="email" id="email" value="{{ old('email') }}" required
+                        class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#1a5276]/40 focus:ring-2 focus:ring-[#1a5276]/10 transition-all @error('email') border-rose-300 ring-2 ring-rose-100 @enderror"
+                        placeholder="example@email.com">
+                    @error('email')
+                        <p class="mt-1.5 text-xs text-rose-500 flex items-center gap-1"><i class="bi bi-exclamation-circle"></i> {{ $message }}</p>
+                    @enderror
+                </div>
+
+                {{-- Phone --}}
+                <div class="mb-5">
+                    <label for="phone" class="block text-sm font-semibold text-slate-700 mb-2">
+                        លេខទូរស័ព្ទ
+                    </label>
+                    <input type="text" name="phone" id="phone" value="{{ old('phone') }}"
+                        class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#1a5276]/40 focus:ring-2 focus:ring-[#1a5276]/10 transition-all @error('phone') border-rose-300 ring-2 ring-rose-100 @enderror"
+                        placeholder="012 345 678">
+                    @error('phone')
+                        <p class="mt-1.5 text-xs text-rose-500 flex items-center gap-1"><i class="bi bi-exclamation-circle"></i> {{ $message }}</p>
+                    @enderror
+                </div>
+
+                {{-- Website --}}
+                <div class="mb-5">
+                    <label for="website" class="block text-sm font-semibold text-slate-700 mb-2">
+                        គេហទំព័រ
+                    </label>
+                    <input type="url" name="website" id="website" value="{{ old('website') }}"
+                        class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#1a5276]/40 focus:ring-2 focus:ring-[#1a5276]/10 transition-all @error('website') border-rose-300 ring-2 ring-rose-100 @enderror"
+                        placeholder="https://example.com">
+                    @error('website')
+                        <p class="mt-1.5 text-xs text-rose-500 flex items-center gap-1"><i class="bi bi-exclamation-circle"></i> {{ $message }}</p>
+                    @enderror
+                </div>
+
+                {{-- Active Status --}}
+                <div class="mb-6">
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" name="is_active" id="is_active" value="1" {{ old('is_active', true) ? 'checked' : '' }}
+                            class="w-4.5 h-4.5 rounded border-slate-300 text-[#22a86a] focus:ring-[#22a86a]/20 cursor-pointer">
+                        <span class="text-sm font-medium text-slate-700 group-hover:text-slate-900 transition-colors">ស្ថានភាពសកម្ម</span>
+                    </label>
+                </div>
+
+                {{-- Actions --}}
+                <div class="flex items-center justify-between pt-5 border-t border-slate-100">
+                    <a href="{{ route('authors.index') }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+                        <i class="bi bi-x-lg text-xs"></i>
+                        <span>បោះបង់</span>
+                    </a>
+                    <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#22a86a] hover:bg-[#1e9660] text-white text-sm font-semibold shadow-sm transition-colors">
+                        <i class="bi bi-check-lg"></i>
+                        <span>រក្សាទុក</span>
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
+
 </div>
 @endsection

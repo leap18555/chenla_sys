@@ -15,14 +15,12 @@ use App\Http\Controllers\RepaymentController;
 use App\Http\Controllers\CollateralController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\AdminController;
+
 /*
 |--------------------------------------------------------------------------
-| Public & Guest Routes
+| Public & Authentication Routes
 |--------------------------------------------------------------------------
 */
- // Admin Dashboard
-    Route::get('/admin_dashboard', [AdminController::class, 'admin_dashboard'])
-        ->name('dashboard');
 
 // Public Frontend
 Route::controller(ProductsController::class)->group(function () {
@@ -30,20 +28,14 @@ Route::controller(ProductsController::class)->group(function () {
     Route::get('/exchange', 'index')->name('exchange');
 });
 
-// Redirect default /home requests to dashboard (Fixes the 404 error when logged-in users hit guest routes)
-Route::get('/home', function () {
-    return redirect()->route('dashboard');
+// Authentication Routes (ដក middleware('guest') ចេញ ដើម្បីឲ្យបើកទំព័រ Login បានជានិច្ច)
+Route::controller(UserController::class)->group(function () {
+    Route::get('/login', 'ShowLogin')->name('login');
+    Route::post('/login', 'login')->name('login.perform');
+
+    Route::get('/register', 'ShowRegister')->name('register');
+    Route::post('/register', 'register')->name('register.perform');
 });
-
-// Authentication Routes (សម្រាប់ Guest ដែលមិនទាន់ Login)
-    Route::controller(UserController::class)->group(function () {
-        Route::get('/login', 'ShowLogin')->name('login');
-        Route::post('/login', 'login')->name('login.perform');
-
-        Route::get('/register', 'ShowRegister')->name('register');
-        Route::post('/register', 'register')->name('register.perform');
-    });
-
 
 /*
 |--------------------------------------------------------------------------
@@ -53,19 +45,28 @@ Route::get('/home', function () {
 
 Route::middleware(['auth'])->group(function () {
 
-    // Logout Route
-    Route::post('/logout', [UserController::class, 'logout'])->name('logout');
+    // Redirect default /home requests to dashboard
+    Route::get('/home', function () {
+        return redirect()->route('dashboard');
+    });
+
+    // Logout Route (គាំទ្រទាំង POST និង GET ដើម្បីងាយស្រួលតេស្ត)
+    Route::match(['get', 'post'], '/logout', [UserController::class, 'logout'])->name('logout');
+
+    // Admin Dashboard
+    Route::get('/admin_dashboard', [AdminController::class, 'admin_dashboard'])->name('admin.dashboard');
+    Route::get('/admin-dashboard', [AdminController::class, 'admin_dashboard']);
 
     // User Profile
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
-    // Dashboard
+    // Dashboards
     Route::get('/user/home', function () {
         return view('user.home');
     })->name('user.Home');
-    
+
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Authors Resource
@@ -96,14 +97,14 @@ Route::middleware(['auth'])->group(function () {
     // Reports
     Route::middleware(['can:view-reports'])->group(function () {
         Route::get('/reports', function () {
-            //return view('reports.index');
+            return view('reports.index');
         })->name('reports.index');
     });
 
     // System Audit Logs
     Route::middleware(['can:view-audit-logs'])->group(function () {
         Route::get('/audit-logs', function () {
-            //return view('audit-logs.index');
+            return view('audit-logs.index');
         })->name('audit-logs.index');
     });
 
@@ -112,5 +113,4 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('staff', StaffController::class);
         Route::resource('roles', RoleController::class);
     });
-
 });

@@ -12,10 +12,32 @@ class StaffController extends Controller
     /**
      * Display a listing of staff members.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $staff = Staff::latest()->paginate(10);
-        return view('staff.index', compact('staff'));
+        $query = Staff::query();
+
+        if ($request->filled('search')) {
+            $search = trim($request->search);
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('position', 'like', "%{$search}%")
+                  ->orWhere('department', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('department') && $request->department !== 'all') {
+            $query->where('department', $request->department);
+        }
+
+        $departments = Staff::whereNotNull('department')->where('department', '!=', '')->distinct()->pluck('department');
+        $staff = $query->latest()->paginate(10);
+
+        return view('staff.index', compact('staff', 'departments'));
     }
 
     /**
@@ -23,7 +45,8 @@ class StaffController extends Controller
      */
     public function create()
     {
-        return view('staff.create');
+        $departments = Staff::whereNotNull('department')->where('department', '!=', '')->distinct()->pluck('department');
+        return view('staff.create', compact('departments'));
     }
 
     /**
@@ -35,15 +58,15 @@ class StaffController extends Controller
             'name'       => 'required|string|max:255',
             'position'   => 'required|string|max:255',
             'department' => 'required|string|max:255',
-            'status'     => 'required|string|in:active,inactive',
-            'email'      => 'nullable|email|unique:users,email',
+            'status'     => 'required|string|in:active,leave,inactive',
+            'email'      => 'nullable|email|unique:staff,email',
             'password'   => 'nullable|string|min:8',
-            'role'       => 'nullable|in:1,2,3,admin,manager,staff',
+            'role'       => 'nullable',
         ]);
 
         // Map textual role input to integers if applicable
         if (isset($validated['role'])) {
-            $roleMap = ['admin' => 1, 'manager' => 2, 'staff' => 3];
+            $roleMap = ['admin' => 1, 'manager' => 2, 'staff' => 3, 'cashier' => 3];
             $validated['role'] = $roleMap[$validated['role']] ?? (int)$validated['role'];
         }
 
@@ -52,16 +75,18 @@ class StaffController extends Controller
 
         // Optional: Also create a User login account if email & password are provided
         if (!empty($validated['email']) && !empty($validated['password'])) {
-            User::create([
-                'name'     => $validated['name'],
-                'email'    => $validated['email'],
-                'password' => Hash::make($validated['password']),
-                'role'     => $validated['role'] ?? 3, // Default to Staff (3)
-            ]);
+            User::updateOrCreate(
+                ['email' => $validated['email']],
+                [
+                    'name'     => $validated['name'],
+                    'password' => Hash::make($validated['password']),
+                    'role'     => $validated['role'] ?? 3,
+                ]
+            );
         }
 
         return redirect()->route('staff.index')
-            ->with('success', 'Staff added successfully.');
+            ->with('success', 'បានបន្ថែមបុគ្គលិកដោយជោគជ័យ។ (Staff added successfully)');
     }
 
     /**
@@ -77,7 +102,8 @@ class StaffController extends Controller
      */
     public function edit(Staff $staff)
     {
-        return view('staff.edit', compact('staff'));
+        $departments = Staff::whereNotNull('department')->where('department', '!=', '')->distinct()->pluck('department');
+        return view('staff.edit', compact('staff', 'departments'));
     }
 
     /**
@@ -89,13 +115,20 @@ class StaffController extends Controller
             'name'       => 'required|string|max:255',
             'position'   => 'required|string|max:255',
             'department' => 'required|string|max:255',
-            'status'     => 'required|string|in:active,inactive',
+            'status'     => 'required|string|in:active,leave,inactive',
+            'email'      => 'nullable|email|unique:staff,email,' . $staff->id,
+            'role'       => 'nullable',
         ]);
+
+        if (isset($validated['role'])) {
+            $roleMap = ['admin' => 1, 'manager' => 2, 'staff' => 3, 'cashier' => 3];
+            $validated['role'] = $roleMap[$validated['role']] ?? (int)$validated['role'];
+        }
 
         $staff->update($validated);
 
-        return redirect()->route('staff.index')
-            ->with('success', 'Staff updated successfully.');
+        return redirect()->route('staff.show', $staff->id)
+            ->with('success', 'បានធ្វើបច្ចុប្បន្នភាពព័ត៌មានបុគ្គលិកដោយជោគជ័យ។ (Staff updated successfully)');
     }
 
     /**

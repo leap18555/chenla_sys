@@ -46,4 +46,20 @@ class Loan extends Model
     {
         return $this->belongsTo(Customer::class);
     }
+
+    /**
+     * Get the collaterals associated with the loan.
+     */
+    public function collaterals()
+    {
+        return $this->hasMany(Collateral::class);
+    }
+
+    /**
+     * Get the repayments associated with the loan.
+     */
+    public function repayments()
+    {
+        return $this->hasMany(Repayment::class);
+    }
 }

@@ -42,5 +42,15 @@ class AppServiceProvider extends ServiceProvider
             $userRole = strtolower($user->role);
             return in_array($userRole, ['admin', 'manager', 'staff']) || in_array($user->role, [1, 2, 3]);
         });
+
+        Gate::define('view-reports', function (User $user) {
+            $userRole = strtolower($user->role);
+            return in_array($userRole, ['admin', 'manager']) || in_array($user->role, [1, 2]) || (method_exists($user, 'hasPermission') && $user->hasPermission('view-reports'));
+        });
+
+        Gate::define('view-audit-logs', function (User $user) {
+            $userRole = strtolower($user->role);
+            return in_array($userRole, ['admin', 'manager']) || in_array($user->role, [1, 2]) || (method_exists($user, 'hasPermission') && $user->hasPermission('view-audit-logs'));
+        });
     }
 }

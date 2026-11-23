@@ -4,6 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -23,6 +25,8 @@ class User extends Authenticatable
         'password',
         'role',
         'avatar',
+        'phone',
+        'bio',
     ];
 
     /**
@@ -42,7 +46,16 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password' => 'hashed',
+        'password'          => 'hashed',
+    ];
+
+    /**
+     * Accessors to append to the model's JSON/Array form for API responses.
+     *
+     * @var array<int, string>
+     */
+    protected $appends = [
+        'avatar_url',
     ];
 
     /*
@@ -51,12 +64,12 @@ class User extends Authenticatable
     |--------------------------------------------------------------------------
     */
 
-    public function loans()
+    public function loans(): HasMany
     {
         return $this->hasMany(Loan::class);
     }
 
-    public function roles()
+    public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class);
     }
@@ -67,27 +80,46 @@ class User extends Authenticatable
     |--------------------------------------------------------------------------
     */
 
-    // ពិនិត្យមើលថាតើអ្នកប្រើប្រាស់ជា Admin ឬទេ
+    /**
+     * ពិនិត្យមើលថាតើអ្នកប្រើប្រាស់ជា Admin ឬទេ
+     * Supports both 'admin' string, 1 integer/string, and null safety in PHP 8.1+
+     */
     public function isAdmin(): bool
     {
-        return strtolower($this->role) === 'admin';
+        $role = strtolower((string) $this->role);
+
+        return $role === 'admin' || $role === '1';
     }
 
-    // ផ្ទៀងផ្ទាត់សិទ្ធិ (Check Permission)
+    /**
+     * ផ្ទៀងផ្ទាត់សិទ្ធិ (Check Permission)
+     */
     public function hasPermission(string $permissionSlug): bool
     {
+        // ប្រសិនបើជា Admin ឱ្យមានសិទ្ធិទាំងអស់ដោយស្វ័យប្រវត្តិ
+        if ($this->isAdmin()) {
+            return true;
+        }
+
         return $this->roles()->whereHas('permissions', function ($query) use ($permissionSlug) {
             $query->where('slug', $permissionSlug);
         })->exists();
     }
 
-    // ទាញយក URL រូបភាព Avatar (ជាមួយនឹង Default UI Avatar)
+    /**
+     * ទាញយក URL រូបភាព Avatar (ជាមួយនឹង Default UI Avatar)
+     */
     public function getAvatarUrlAttribute(): string
     {
-        if ($this->avatar) {
-            return asset('storage/' . $this->avatar);
+        if (!empty($this->avatar)) {
+            // If avatar is already a full URL, return it directly
+            if (filter_var($this->avatar, FILTER_VALIDATE_URL)) {
+                return $this->avatar;
+            }
+
+            return asset('storage/' . ltrim($this->avatar, '/'));
         }
 
-        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&color=7F9CF5&background=EBF4FF';
+        return 'https://ui-avatars.com/api/?name=' . urlencode((string) $this->name) . '&color=7F9CF5&background=EBF4FF';
     }
 }
